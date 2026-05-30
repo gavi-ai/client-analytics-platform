@@ -25,41 +25,49 @@ This is not a toy pipeline. It is the sanitised, open-sourced version of a real 
 ## Architecture
 
 ```
-8 SaaS APIs                     Airflow DAGs (daily @ 6am UTC)
-  ├── Stripe (payments)  ──────► extract_stripe_dag.py
-  ├── HubSpot (CRM)      ──────► extract_hubspot_dag.py
-  ├── Mailchimp          ──────► extract_mailchimp_dag.py
-  ├── Zendesk (support)  ──────► extract_zendesk_dag.py
-  ├── Google Analytics   ──────► extract_ga4_dag.py
-  ├── Shopify (orders)   ──────► extract_shopify_dag.py
-  ├── Intercom           ──────► extract_intercom_dag.py
-  └── Custom CRM         ──────► extract_custom_api_dag.py
-           │
-           ▼
-      AWS S3 (raw landing zone)
-      s3://client-raw/{source}/{date}/
-           │
-           ▼
-      BigQuery (GCP free tier)
-      ┌──────────────────────────┐
-      │  dataset: raw            │  ◄── direct load from S3
-      │  dataset: staging        │  ◄── dbt staging models
-      │  dataset: marts          │  ◄── dbt business models
-      └──────────────────────────┘
-           │
-      Data Contracts (YAML schema + dbt tests)
-      ├── row count thresholds
-      ├── null rate limits
-      ├── referential integrity
-      └── business rule assertions
-           │
-           ▼
-      Streamlit Dashboard
-      (Revenue, CAC, Churn, LTV — auto-refresh daily)
-           │
-      Slack Alerts (pipeline success / failure / anomaly)
-```
+## Architecture
 
+```mermaid
+graph TD
+    subgraph Sources [Third-Party SaaS APIs]
+        S[Stripe]
+        H[HubSpot]
+        M[Mailchimp]
+        Z[Zendesk & 4 Others]
+    end
+
+    subgraph Orchestration [Apache Airflow]
+        E[Async Extractor DAGs]
+    end
+
+    subgraph Storage [Raw Data Landing]
+        S3[(AWS S3 s3://client-raw)]
+    end
+
+    subgraph Warehouse [Google BigQuery]
+        BQ_RAW[(Raw Dataset)]
+        
+        subgraph Transformation [dbt Core]
+            DC{YAML Data Contracts}
+            STG[Staging Models]
+            MRT[Business Marts / SCD2]
+        end
+    end
+
+    subgraph Consumption [Business Layer]
+        DASH[Streamlit Dashboard]
+        SLACK((Slack Alerts))
+    end
+
+    Sources -->|httpx async| Orchestration
+    Orchestration -->|Load| Storage
+    Storage -->|Direct Load| BQ_RAW
+    BQ_RAW --> DC
+    DC -->|Enforce Schema| STG
+    STG -->|Transform| MRT
+    MRT --> DASH
+    Orchestration -.->|Failure/Anomaly| SLACK
+```
 ---
 
 ## Tech Stack
