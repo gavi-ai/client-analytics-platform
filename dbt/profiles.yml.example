@@ -1,0 +1,10 @@
+default:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: your-gcp-project-id
+      dataset: analytics_dev
+      threads: 4
+      keyfile: /path/to/service-account.json

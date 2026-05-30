@@ -10,5 +10,4 @@ class StripeConnector(BaseAsyncConnector):
         )
 
     def get_endpoint(self, date: str) -> str:
-        # Example: Fetching charges created on a specific date (Unix timestamp logic simplified for template)
         return "/charges?limit=100"

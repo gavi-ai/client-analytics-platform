@@ -1,0 +1,14 @@
+name: 'client_analytics_platform'
+version: '1.0.0'
+config-version: 2
+profile: 'default'
+model-paths: ["models"]
+test-paths: ["tests"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+models:
+  client_analytics_platform:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table
