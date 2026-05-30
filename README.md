@@ -418,4 +418,4 @@ This repository doubles as a **proposal artifact**. When pitching to a new clien
 
 ## License
 
-MIT — fork freely. If you use this as a base for a client engagement, a GitHub star is appreciated.
+MIT — fork freely. If you use this as a base for a client engagement, a GitHub star is appreciated..
