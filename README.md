@@ -24,7 +24,7 @@ This is not a toy pipeline. It is the sanitised, open-sourced version of a real 
 
 ## Architecture
 
-```
+
 ## Architecture
 
 ```mermaid
