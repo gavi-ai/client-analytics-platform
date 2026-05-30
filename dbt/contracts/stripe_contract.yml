@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: stg_stripe_payments
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: payment_id
+        data_type: string
+        constraints:
+          - type: not_null
+          - type: unique
+      - name: amount
+        data_type: numeric
+        constraints:
+          - type: not_null
+      - name: currency
+        data_type: string
+        constraints:
+          - type: not_null
+      - name: created_at
+        data_type: timestamp
+        constraints:
+          - type: not_null
