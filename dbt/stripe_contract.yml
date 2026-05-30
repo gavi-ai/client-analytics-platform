@@ -1,0 +1,76 @@
+version: 2
+
+# Data contract for Stripe payments staging model.
+# If Stripe changes their API and any constrained column breaks,
+# dbt build fails at this model — before bad data reaches marts.
+# The Airflow DAG then sends a Slack alert with the exact failure.
+
+models:
+  - name: stg_stripe_payments
+    description: >
+      Cleaned Stripe charges. One row per payment_id.
+      Source: Stripe Charges API → BigQuery raw.stripe_raw → this model.
+
+    config:
+      contract:
+        enforced: true   # hard fail if column types or constraints are violated
+
+    columns:
+      - name: payment_id
+        description: Stripe charge ID (ch_...)
+        data_type: string
+        constraints:
+          - type: not_null
+          - type: unique
+
+      - name: amount
+        description: Charge amount in the original currency (already converted from cents).
+        data_type: numeric
+        constraints:
+          - type: not_null
+
+      - name: amount_refunded
+        description: Amount refunded. 0 if no refund.
+        data_type: numeric
+        constraints:
+          - type: not_null
+
+      - name: currency
+        description: ISO 4217 currency code (uppercase, e.g. USD, EUR).
+        data_type: string
+        constraints:
+          - type: not_null
+
+      - name: status
+        description: Charge status — one of succeeded, pending, failed.
+        data_type: string
+        constraints:
+          - type: not_null
+          - type: accepted_values
+            values: ['succeeded', 'pending', 'failed']
+
+      - name: is_paid
+        description: True if the charge was successfully paid.
+        data_type: boolean
+        constraints:
+          - type: not_null
+
+      - name: is_refunded
+        description: True if the charge has been fully refunded.
+        data_type: boolean
+        constraints:
+          - type: not_null
+
+      - name: created_at
+        description: Timestamp when the charge was created (UTC).
+        data_type: timestamp
+        constraints:
+          - type: not_null
+
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "amount >= 0"
+          name: amount_non_negative
+      - dbt_utils.expression_is_true:
+          expression: "amount_refunded <= amount"
+          name: refund_not_exceeds_charge

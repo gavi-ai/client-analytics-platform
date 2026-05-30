@@ -1,0 +1,70 @@
+version: 2
+
+models:
+  - name: stg_hubspot_contacts
+    description: >
+      Cleaned HubSpot CRM contacts. One row per customer_id (latest version).
+      Full change history is tracked in dim_customers_scd2.
+      Source: HubSpot Contacts API v3 → BigQuery raw.hubspot_raw → this model.
+
+    config:
+      contract:
+        enforced: true
+
+    columns:
+      - name: customer_id
+        description: HubSpot internal contact ID.
+        data_type: string
+        constraints:
+          - type: not_null
+          - type: unique
+
+      - name: email
+        description: Contact email address (lowercased, trimmed).
+        data_type: string
+        constraints:
+          - type: not_null
+
+      - name: lifecycle_stage
+        description: HubSpot lifecycle stage.
+        data_type: string
+        constraints:
+          - type: accepted_values
+            values:
+              - subscriber
+              - lead
+              - marketingqualifiedlead
+              - salesqualifiedlead
+              - opportunity
+              - customer
+              - evangelist
+              - other
+
+      - name: acquisition_channel
+        description: Normalised marketing channel (standardised in staging model).
+        data_type: string
+        constraints:
+          - type: accepted_values
+            values:
+              - organic_search
+              - paid_search
+              - social_media
+              - email
+              - direct
+              - referral
+              - other
+
+      - name: created_at
+        description: Timestamp when the contact was created in HubSpot.
+        data_type: timestamp
+        constraints:
+          - type: not_null
+
+      - name: updated_at
+        description: Timestamp of last modification (used for SCD2 tracking).
+        data_type: timestamp
+
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "updated_at >= created_at or updated_at is null"
+          name: updated_at_after_created_at
