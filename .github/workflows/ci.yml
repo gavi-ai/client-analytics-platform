@@ -1,14 +1,56 @@
-name: Data Pipeline CI
-on: [push, pull_request]
+name: Pipeline CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
 jobs:
-  test:
+  lint-and-test:
+    name: Lint, validate & unit test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint with ruff
+        run: ruff check . --select E,W,F --ignore E501
+
+      - name: Run unit tests
+        run: python -m pytest tests/ -v --tb=short
+
+      - name: Validate dbt project compiles
+        run: |
+          cd dbt
+          dbt deps
+          dbt compile --profiles-dir ./profiles --target ci
+        env:
+          DBT_BIGQUERY_PROJECT: ${{ secrets.DBT_BIGQUERY_PROJECT || 'ci-placeholder' }}
+
+      - name: Validate connector schemas
+        run: python -m pytest tests/test_connectors.py -v --tb=short
+
+  security-scan:
+    name: Secret scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with: { python-version: '3.11' }
-      - run: |
-          echo "httpx==0.27.0" > requirements.txt
-          echo "dbt-core==1.8.0" >> requirements.txt
-          pip install -r requirements.txt
-      - run: echo "CI Environment Ready - simulated pass"
+      - name: Check for hardcoded secrets
+        run: |
+          # Fail if any file contains what looks like a live API key
+          if grep -rE "(sk_live_|rk_live_|AIza[0-9A-Za-z\-_]{35})" --include="*.py" --include="*.yml" --include="*.yaml" .; then
+            echo "❌ Possible live API key found. Use .env for secrets."
+            exit 1
+          fi
+          echo "✅ No hardcoded secrets found."
